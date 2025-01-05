@@ -50,7 +50,7 @@ pub fn main() !void {
     var groupBy = lib.GroupBy(lib.Repo, lib.getKey).init(allocator);
     defer groupBy.deinit();
 
-    var groupped = try groupBy.group(&repos.value, "Not-Set");
+    var groupped = try groupBy.group(&repos.value);
 
     var langIter = groupped.iterator();
 

@@ -31,11 +31,6 @@ pub fn GithubStarredAPI() type {
         bearerToken: []const u8,
         client: *Client,
 
-        pub fn deinit(self: *Self) void {
-            self.allocator.free(self.uri);
-            self.allocator.free(self.bearerToken);
-        }
-
         pub fn init(allocator: Allocator, bearerToken: []const u8, client: *Client) Self {
             return .{
                 .bearerToken = bearerToken,

@@ -14,7 +14,7 @@ pub const Repo = struct {
     language: ?[]const u8,
 };
 
-pub fn GroupBy(comptime T: type, keyFn: fn (*T) ?[]const u8) type {
+pub fn GroupBy(comptime T: type, keyFn: fn (*T) []const u8) type {
     return struct {
         const Self = @This();
         map: std.StringHashMap([]*T),
@@ -28,9 +28,9 @@ pub fn GroupBy(comptime T: type, keyFn: fn (*T) ?[]const u8) type {
         }
 
         /// Returns a StringHashMap managed by GroupBy. In case elements T can't give a []u8 key.
-        pub fn group(self: *Self, items: *const []T, default_key: []const u8) !*std.StringHashMap([]*T) {
+        pub fn group(self: *Self, items: *const []T) !*std.StringHashMap([]*T) {
             for (items.*) |*item| {
-                const key = keyFn(item) orelse default_key;
+                const key = keyFn(item);
                 const gop = try self.map.getOrPut(key);
                 if (!gop.found_existing) {
                     // Allocate a slice of one repo pointer for new languages
@@ -58,8 +58,8 @@ pub fn GroupBy(comptime T: type, keyFn: fn (*T) ?[]const u8) type {
     };
 }
 
-pub fn getKey(r: *Repo) ?[]const u8 {
-    return r.language;
+pub fn getKey(r: *Repo) []const u8 {
+    return r.language orelse "Not-Set";
 }
 
 test "byLanguage works" {
@@ -94,7 +94,7 @@ test "byLanguage works" {
 
     const repo_slice: []Repo = repos[0..];
 
-    const groupped = try groupBy.group(&repo_slice, "Not-Set");
+    const groupped = try groupBy.group(&repo_slice);
 
     try std.testing.expectEqual(@as(usize, 2), groupped.count());
 }
