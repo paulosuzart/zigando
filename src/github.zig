@@ -6,7 +6,9 @@ const Client = std.http.Client;
 const Location = std.http.Client.FetchOptions.Location;
 const FetchOptions = std.http.Client.FetchOptions;
 const Headers = std.http.Client.Request.Headers;
+const Uri = std.Uri;
 
+const GET = std.http.Method.GET;
 const URI = "https://api.github.com/user/starred";
 
 pub const HttpError = error{
@@ -39,16 +41,17 @@ pub fn GithubStarredAPI() type {
                 .bearerToken = bearerToken,
                 .client = client,
                 .allocator = allocator,
-                .uri = std.Uri.parse(URI) catch unreachable,
+                .uri = Uri.parse(URI) catch unreachable,
             };
         }
 
+        // Parsed result must be managed by the call site.
         pub fn fetchFirstPage(self: *Self) StarredApiError!std.json.Parsed([]lib.Repo) {
             var respStorage = std.ArrayList(u8).init(self.allocator);
             defer respStorage.deinit();
             const opts = FetchOptions{
                 .location = Location{ .uri = self.uri },
-                .method = std.http.Method.GET,
+                .method = GET,
                 .headers = Headers{ .authorization = .{ .override = self.bearerToken } },
                 .response_storage = .{ .dynamic = &respStorage },
             };

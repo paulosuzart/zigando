@@ -37,7 +37,7 @@ pub fn main() !void {
 
     const repos = try starredApi.fetchFirstPage();
     defer repos.deinit();
-    std.debug.print("Len is {}\n", .{repos.value.len});
+    std.debug.print("{} Repos returned\n", .{repos.value.len});
 
     for (repos.value) |r| {
         std.debug.print("Repo name is {s}/{s} ({s})\n", .{
@@ -49,9 +49,11 @@ pub fn main() !void {
 
     var groupBy = lib.GroupBy(lib.Repo, lib.getKey).init(allocator);
     defer groupBy.deinit();
+
     var groupped = try groupBy.group(&repos.value, "Not-Set");
 
     var langIter = groupped.iterator();
+
     while (langIter.next()) |g| {
         std.debug.print("Language {s}: {d} repos\n", .{ g.key_ptr.*, g.value_ptr.*.len });
     }
