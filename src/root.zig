@@ -17,43 +17,39 @@ pub const Repo = struct {
 pub fn GroupBy(comptime T: type, keyFn: fn (*T) []const u8) type {
     return struct {
         const Self = @This();
-        map: std.StringHashMap([]*T),
+        map: std.StringHashMap(std.ArrayList(*Repo)),
         allocator: std.mem.Allocator,
+        arena: std.heap.ArenaAllocator,
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
-                .map = std.StringHashMap([]*T).init(allocator),
+                .map = std.StringHashMap(std.ArrayList(*Repo)).init(allocator),
                 .allocator = allocator,
+                .arena = std.heap.ArenaAllocator.init(allocator),
             };
         }
 
         /// Returns a StringHashMap managed by GroupBy. In case elements T can't give a []u8 key.
-        pub fn group(self: *Self, items: *const []T) !*std.StringHashMap([]*T) {
+        pub fn group(self: *Self, items: *const []T) !*std.StringHashMap(std.ArrayList(*Repo)) {
+            const arenaAlloc = self.arena.allocator();
             for (items.*) |*item| {
                 const key = keyFn(item);
                 const gop = try self.map.getOrPut(key);
                 if (!gop.found_existing) {
-                    // Allocate a slice of one repo pointer for new languages
-                    gop.value_ptr.* = try self.allocator.alloc(*T, 1);
-                    gop.value_ptr.*[0] = item; // repo is now a pointer
+                    var arr = std.ArrayList(*Repo).init(arenaAlloc);
+                    errdefer arr.deinit();
+                    try arr.append(item);
+                    gop.value_ptr.* = arr;
                 } else {
-                    // Extend the existing slice of repo pointers
-                    const current_slice = gop.value_ptr.*;
-                    var new_slice = try self.allocator.realloc(current_slice, current_slice.len + 1);
-                    new_slice[current_slice.len] = item; // repo is now a pointer
-                    gop.value_ptr.* = new_slice;
+                    try gop.value_ptr.*.append(item);
                 }
             }
-
             return &self.map;
         }
 
         pub fn deinit(self: *Self) void {
-            var iter = self.map.iterator();
-            while (iter.next()) |e| {
-                self.allocator.free(e.value_ptr.*);
-            }
             self.map.deinit();
+            self.arena.deinit();
         }
     };
 }
@@ -88,13 +84,18 @@ test "byLanguage works" {
             .description = "sample",
         },
     };
-
-    var groupBy = GroupBy(Repo, getKey).init(allocator);
-    defer groupBy.deinit();
-
     const repo_slice: []Repo = repos[0..];
 
-    const groupped = try groupBy.group(&repo_slice);
+    {
+        var groupBy = GroupBy(Repo, getKey).init(allocator);
+        defer groupBy.deinit();
 
-    try std.testing.expectEqual(@as(usize, 2), groupped.count());
+        const groupped = try groupBy.group(&repo_slice);
+        try std.testing.expectEqual(@as(usize, 2), groupped.count());
+        try std.testing.expect(groupped.contains("rust"));
+        try std.testing.expectEqual(@as(usize, 2), groupped.get("rust").?.items.len);
+        try std.testing.expect(groupped.contains("zig"));
+    }
+
+    try std.testing.expectEqual(repo_slice[0].name, "repo1");
 }

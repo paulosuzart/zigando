@@ -55,6 +55,6 @@ pub fn main() !void {
     var langIter = groupped.iterator();
 
     while (langIter.next()) |g| {
-        std.debug.print("Language {s}: {d} repos\n", .{ g.key_ptr.*, g.value_ptr.*.len });
+        std.debug.print("Language {s}: {d} repos\n", .{ g.key_ptr.*, g.value_ptr.*.items.len });
     }
 }
