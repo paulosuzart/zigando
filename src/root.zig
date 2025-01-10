@@ -10,11 +10,14 @@ pub const Repo = struct {
     name: []const u8,
     owner: Owner,
     description: ?[]const u8,
-    topics: [][]u8,
+    topics: [][]const u8,
     language: ?[]const u8,
 };
 
-pub fn GroupBy(comptime T: type, keyFn: fn (*T) []const u8) type {
+pub fn GroupBy(comptime T: type, keyFn: *const fn (*const T) []const u8) type {
+    if (@typeInfo(T) != .@"struct") {
+        @compileError("Expected struct type for group by" ++ @tagName(@typeInfo(T)));
+    }
     return struct {
         const Self = @This();
         map: std.StringHashMap(std.ArrayList(*Repo)),
@@ -54,8 +57,12 @@ pub fn GroupBy(comptime T: type, keyFn: fn (*T) []const u8) type {
     };
 }
 
-pub fn getKey(r: *Repo) []const u8 {
+pub fn getKey(r: *const Repo) []const u8 {
     return r.language orelse "Not-Set";
+}
+
+pub fn getKey2(_: *const u32) []const u8 {
+    return "Not-Set";
 }
 
 test "byLanguage works" {
